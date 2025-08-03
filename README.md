@@ -1,7 +1,14 @@
-# atlas_exporter 
+# atlas_exporter
 [![Go Report Card](https://goreportcard.com/badge/github.com/czerwonk/atlas_exporter)](https://goreportcard.com/report/github.com/czerwonk/atlas_exporter)
 
 Metric exporter for RIPE Atlas measurement results
+
+## Fork Notice
+This repository includes a forked version of the RIPE Atlas Go bindings (`github.com/rjocoleman/ripeatlas`) that adds support for NSID (Name Server Identifier) in DNS measurements.
+
+The NSID functionality in the forked ripeatlas library will be contributed back to the upstream project. However, the high-cardinality label implementation in this exporter requires additional work to make it backwards compatible (e.g., feature flags or opt-in configuration) before it can be safely contributed upstream.
+
+**⚠️ High Cardinality Warning**: NSID support adds a high-cardinality label to DNS metrics. This is not a drop-in replacement for deployments concerned with cardinality limits. The NSID label is only added when present in DNS responses.
 
 ## Remarks
 * this is an early version, more features will be added step by step
@@ -38,8 +45,8 @@ docker run -d --restart unless-stopped -p 9400:9400 czerwonk/atlas_exporter
 ```
 To run in config file mode:
 ```
-docker run -d -e CONFIG=/tmp/config.yml -v /tmp/config.yml:/tmp/config.yml --restart unless-stopped -p 9400:9400 czerwonk/atlas_exporter 
-``` 
+docker run -d -e CONFIG=/tmp/config.yml -v /tmp/config.yml:/tmp/config.yml --restart unless-stopped -p 9400:9400 czerwonk/atlas_exporter
+```
 
 ## Usage
 ### Start server
@@ -78,7 +85,7 @@ or ad hoc for measuremnt 8772164:
 curl http://127.0.0.1:9400/metrics?measurement_id=8772164
 ```
 in both cases the result should look similar to this one:
-``` 
+```
 # HELP atlas_traceroute_hops Number of hops
 # TYPE atlas_traceroute_hops gauge
 atlas_traceroute_hops{asn="1101",dst_addr="8.8.8.8",dst_name="8.8.8.8",ip_version="4",measurement="8772164",probe="6031"} 9
@@ -99,8 +106,8 @@ atlas_traceroute_hops{asn="133752",dst_addr="8.8.8.8",dst_name="8.8.8.8",ip_vers
 * ping measurements (success, min/max/avg latency, dups, size)
 * traceroute measurements (success, hop count, rtt)
 * ntp (delay, derivation, ntp version)
-* dns (succress, rtt)
-* http (return code, rtt, http version, header size, body size)  
+* dns (success, rtt, nsid - Name Server Identifier from EDNS0, displayed as ASCII if printable or hex otherwise)
+* http (return code, rtt, http version, header size, body size)
 * sslcert (alert, rtt)
 
 ## Prometheus configuration

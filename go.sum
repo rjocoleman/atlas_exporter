@@ -1,5 +1,3 @@
-github.com/DNS-OARC/ripeatlas v0.1.1 h1:AQVrN7lpqfZWYa6vTIkPkjtNHKgxxisEmr5zWBbP1FE=
-github.com/DNS-OARC/ripeatlas v0.1.1/go.mod h1:wYJDT80ZxOhrhraakhFXkCeLbk2lu2Y1JlvuuyKZN0s=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
@@ -36,6 +34,8 @@ github.com/prometheus/common v0.64.0 h1:pdZeA+g617P7oGv1CzdTzyeShxAGrTBsolKNOLQP
 github.com/prometheus/common v0.64.0/go.mod h1:0gZns+BLRQ3V6NdaerOhMbwwRbNh9hkGINtQAsP5GS8=
 github.com/prometheus/procfs v0.16.1 h1:hZ15bTNuirocR6u0JZ6BAHHmwS1p8B4P6MRqxtzMyRg=
 github.com/prometheus/procfs v0.16.1/go.mod h1:teAbpZRB1iIAJYREa1LsoWUXykVXA1KlTmWl8x/U+Is=
+github.com/rjocoleman/ripeatlas v0.0.0-20250801231927-23451933de37 h1:uBSs2FFZ5sZNdlLOSjRJ4jKGJ8y/a3gYwzkbXCxFf4o=
+github.com/rjocoleman/ripeatlas v0.0.0-20250801231927-23451933de37/go.mod h1:wYJDT80ZxOhrhraakhFXkCeLbk2lu2Y1JlvuuyKZN0s=
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
 github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=

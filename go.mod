@@ -10,6 +10,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+replace github.com/DNS-OARC/ripeatlas v0.1.1 => github.com/rjocoleman/ripeatlas v0.0.0-20250801231927-23451933de37
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

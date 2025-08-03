@@ -17,7 +17,7 @@ var (
 )
 
 func init() {
-	labels = []string{"measurement", "probe", "dst_addr", "asn", "ip_version", "country_code", "lat", "long"}
+	labels = []string{"measurement", "probe", "dst_addr", "asn", "ip_version", "country_code", "lat", "long", "nsid"}
 
 	successDesc = prometheus.NewDesc(prometheus.BuildFQName(ns, sub, "success"), "Destination was reachable", labels, nil)
 	rttDesc = prometheus.NewDesc(prometheus.BuildFQName(ns, sub, "rtt"), "Roundtrip time in ms", labels, nil)
@@ -29,6 +29,11 @@ type dnsExporter struct {
 
 // Export exports a prometheus metric
 func (m *dnsExporter) Export(res *measurement.Result, probe *probe.Probe, ch chan<- prometheus.Metric) {
+	var nsid string
+	if res.DnsResult() != nil {
+		nsid = res.DnsResult().NsidString()
+	}
+
 	labelValues := []string{
 		m.id,
 		strconv.Itoa(probe.ID),
@@ -38,6 +43,7 @@ func (m *dnsExporter) Export(res *measurement.Result, probe *probe.Probe, ch cha
 		probe.CountryCode,
 		probe.Latitude(),
 		probe.Longitude(),
+		nsid,
 	}
 
 	var rtt float64
