@@ -19,7 +19,6 @@ const connectionRetryInterval = 30 * time.Second
 type streamStrategyWorker struct {
 	resultCh    chan<- *measurement.Result
 	measurement config.Measurement
-	timeout     time.Duration
 }
 
 func (w *streamStrategyWorker) run(ctx context.Context) error {
@@ -29,7 +28,7 @@ func (w *streamStrategyWorker) run(ctx context.Context) error {
 			log.Error(err)
 		} else {
 			log.Infof("Subscribed to results of measurement #%s", w.measurement.ID)
-			w.listenForResults(ctx, w.timeout, ch)
+			w.listenForResults(ctx, ch)
 		}
 
 		select {
@@ -59,7 +58,7 @@ func (w *streamStrategyWorker) subscribe() (<-chan *measurement.Result, error) {
 	return ch, nil
 }
 
-func (w *streamStrategyWorker) listenForResults(ctx context.Context, timeout time.Duration, ch <-chan *measurement.Result) {
+func (w *streamStrategyWorker) listenForResults(ctx context.Context, ch <-chan *measurement.Result) {
 	for {
 		select {
 		case m, ok := <-ch:
@@ -81,9 +80,6 @@ func (w *streamStrategyWorker) listenForResults(ctx context.Context, timeout tim
 			}
 
 			w.resultCh <- m
-		case <-time.After(timeout):
-			log.Errorf("Timeout reached for measurement #%s. Trying to reconnect.", w.measurement.ID)
-			return
 		case <-ctx.Done():
 			return
 		}

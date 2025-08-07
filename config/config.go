@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"time"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -34,8 +33,7 @@ type RttHistogramBucket struct {
 
 // Measurement represents config options for one measurement
 type Measurement struct {
-	ID      string        `yaml:"id"`
-	Timeout time.Duration `yaml:"timeout,omitempty"`
+	ID string `yaml:"id"`
 }
 
 // MeasurementIDs represents all IDs of configured measurements

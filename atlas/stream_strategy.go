@@ -19,16 +19,14 @@ import (
 type streamingStrategy struct {
 	measurements   map[string]*exporter.Measurement
 	cfg            *config.Config
-	defaultTimeout time.Duration
 	mu             sync.Mutex
 }
 
 // NewStreamingStrategy returns an strategy using the RIPE Atlas Streaming API
-func NewStreamingStrategy(ctx context.Context, cfg *config.Config, bufferSize uint, defaultTimeout time.Duration) Strategy {
+func NewStreamingStrategy(ctx context.Context, cfg *config.Config, bufferSize uint) Strategy {
 	s := &streamingStrategy{
-		defaultTimeout: defaultTimeout,
-		cfg:            cfg,
-		measurements:   make(map[string]*exporter.Measurement),
+		cfg:          cfg,
+		measurements: make(map[string]*exporter.Measurement),
 	}
 
 	s.start(ctx, cfg.Measurements, bufferSize)
@@ -42,7 +40,6 @@ func (s *streamingStrategy) start(ctx context.Context, measurements []config.Mea
 		w := &streamStrategyWorker{
 			resultCh:    resultCh,
 			measurement: m,
-			timeout:     s.timeoutForMeasurement(m),
 		}
 		go w.run(ctx)
 	}
@@ -54,14 +51,6 @@ func (s *streamingStrategy) processMeasurementResults(resultCh chan *measurement
 	for r := range resultCh {
 		s.processMeasurementResult(r)
 	}
-}
-
-func (s *streamingStrategy) timeoutForMeasurement(m config.Measurement) time.Duration {
-	if m.Timeout == 0 {
-		return s.defaultTimeout
-	}
-
-	return m.Timeout
 }
 
 func (s *streamingStrategy) processMeasurementResult(r *measurement.Result) {

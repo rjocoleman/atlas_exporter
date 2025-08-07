@@ -23,7 +23,6 @@ import (
 
 const (
 	generalTimeout = 60 * time.Second
-	streamTimeout  = 5 * time.Minute
 	version        = "1.0.4"
 )
 
@@ -38,7 +37,6 @@ var (
 	workerCount         = flag.Uint("worker.count", 8, "Number of go routines retrieving probe information")
 	streaming           = flag.Bool("streaming", true, "Retrieve data by subscribing to Atlas Streaming API")
 	streamingBufferSize = flag.Uint("streaming.buffer-size", 100, "Size of buffer to prevent locking socket.io go routines")
-	streamingTimeout    = flag.Duration("streaming.timeout", streamTimeout, "When no update is received in this timespan a reconnect is initiated.")
 	profiling           = flag.Bool("profiling", false, "Enables pprof endpoints")
 	goMetrics           = flag.Bool("metrics.go", true, "Enables go runtime prometheus metrics")
 	processMetrics      = flag.Bool("metrics.process", true, "Enables process runtime prometheus metrics")
@@ -77,7 +75,7 @@ func main() {
 	if *streaming {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		strategy = atlas.NewStreamingStrategy(ctx, cfg, *streamingBufferSize, *streamingTimeout)
+		strategy = atlas.NewStreamingStrategy(ctx, cfg, *streamingBufferSize)
 	} else {
 		strategy = atlas.NewRequestStrategy(cfg, *workerCount)
 	}

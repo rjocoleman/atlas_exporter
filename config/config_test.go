@@ -5,7 +5,6 @@ package config
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -77,19 +76,6 @@ histogram_buckets:
 			name:      "invalid config",
 			value:     `measurements: { 123, 456 }`,
 			wantsFail: true,
-		},
-		{
-			name: "valid config with timeout",
-			value: `
-measurements:
-  - id: 123
-    timeout: 30s`,
-			expected: Config{
-				Measurements: []Measurement{
-					{ID: "123", Timeout: 30 * time.Second},
-				},
-				FilterInvalidResults: true,
-			},
 		},
 		{
 			name: "valid config with filter override",
