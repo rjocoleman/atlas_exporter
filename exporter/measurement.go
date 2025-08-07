@@ -3,6 +3,8 @@
 package exporter
 
 import (
+	"time"
+
 	"github.com/DNS-OARC/ripeatlas/measurement"
 	"github.com/czerwonk/atlas_exporter/probe"
 	"github.com/prometheus/client_golang/prometheus"
@@ -25,13 +27,21 @@ func WithValidator(v ResultValidator) MeasurementOpt {
 	}
 }
 
+// WithMaxResultAge sets the maximum age for results to be included
+func WithMaxResultAge(age time.Duration) MeasurementOpt {
+	return func(r *Measurement) {
+		r.maxResultAge = age
+	}
+}
+
 // Measurement handles measurement results and converts to metrics
 type Measurement struct {
-	latest     map[int]*measurement.Result
-	probes     map[int]*probe.Probe
-	histograms []Histogram
-	exporter   Exporter
-	validator  ResultValidator
+	latest       map[int]*measurement.Result
+	probes       map[int]*probe.Probe
+	histograms   []Histogram
+	exporter     Exporter
+	validator    ResultValidator
+	maxResultAge time.Duration
 }
 
 // NewMeasurement returns a new instance of `Measurement`
@@ -76,6 +86,13 @@ func (r *Measurement) Describe(ch chan<- *prometheus.Desc) {
 // Collect collects metrics for the `Measurement`
 func (r *Measurement) Collect(ch chan<- prometheus.Metric) {
 	for _, v := range r.latest {
+		// Skip stale results if max age is configured
+		if r.maxResultAge > 0 {
+			cutoff := time.Now().Unix() - int64(r.maxResultAge.Seconds())
+			if v.Timestamp() < int(cutoff) {
+				continue
+			}
+		}
 		r.exporter.Export(v, r.probes[v.PrbId()], ch)
 	}
 

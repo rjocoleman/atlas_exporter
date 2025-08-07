@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"time"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -16,6 +17,7 @@ type Config struct {
 	Measurements         []Measurement    `yaml:"measurements"`
 	HistogramBuckets     HistogramBuckets `yaml:"histogram_buckets"`
 	FilterInvalidResults bool             `yaml:"filter_invalid_results"`
+	MaxResultAge         time.Duration    `yaml:"max_result_age,omitempty"`
 }
 
 // HistogramBuckets defines buckets for several histograms

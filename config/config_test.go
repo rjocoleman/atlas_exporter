@@ -5,6 +5,7 @@ package config
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -83,6 +84,34 @@ histogram_buckets:
 filter_invalid_results: false`,
 			expected: Config{
 				FilterInvalidResults: false,
+			},
+		},
+		{
+			name: "valid config with max_result_age",
+			value: `
+measurements:
+  - id: 123
+max_result_age: 10m`,
+			expected: Config{
+				Measurements: []Measurement{
+					{ID: "123"},
+				},
+				MaxResultAge:         10 * time.Minute,
+				FilterInvalidResults: true,
+			},
+		},
+		{
+			name: "valid config with max_result_age zero",
+			value: `
+measurements:
+  - id: 456
+max_result_age: 0`,
+			expected: Config{
+				Measurements: []Measurement{
+					{ID: "456"},
+				},
+				MaxResultAge:         0,
+				FilterInvalidResults: true,
 			},
 		},
 		{

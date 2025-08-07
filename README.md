@@ -72,6 +72,10 @@ histogram_buckets:
       - 50.0
       - 100.0
 filter_invalid_results: true
+# Optional: filter out results older than specified duration (e.g., 10m, 1h)
+# Useful for removing stale results from non-participating probes
+# Default: 0 (disabled)
+max_result_age: 10m
  ```
 
 ### Call metrics URI
