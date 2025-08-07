@@ -18,7 +18,6 @@ const connectionRetryInterval = 30 * time.Second
 
 type streamStrategyWorker struct {
 	resultCh    chan<- *measurement.Result
-	resetCh     chan<- *config.Measurement
 	measurement config.Measurement
 	timeout     time.Duration
 }
@@ -32,8 +31,6 @@ func (w *streamStrategyWorker) run(ctx context.Context) error {
 			log.Infof("Subscribed to results of measurement #%s", w.measurement.ID)
 			w.listenForResults(ctx, w.timeout, ch)
 		}
-
-		w.resetCh <- &w.measurement
 
 		select {
 		case <-ctx.Done():

@@ -37,37 +37,23 @@ func NewStreamingStrategy(ctx context.Context, cfg *config.Config, bufferSize ui
 
 func (s *streamingStrategy) start(ctx context.Context, measurements []config.Measurement, bufferSize uint) {
 	resultCh := make(chan *measurement.Result, int(bufferSize))
-	resetCh := make(chan *config.Measurement)
 
 	for _, m := range measurements {
 		w := &streamStrategyWorker{
 			resultCh:    resultCh,
-			resetCh:     resetCh,
 			measurement: m,
 			timeout:     s.timeoutForMeasurement(m),
 		}
 		go w.run(ctx)
 	}
 
-	go s.processMeasurementResults(resultCh, resetCh)
+	go s.processMeasurementResults(resultCh)
 }
 
-func (s *streamingStrategy) processMeasurementResults(resultCh chan *measurement.Result, resetCh chan *config.Measurement) {
-	for {
-		select {
-		case r := <-resultCh:
-			s.processMeasurementResult(r)
-		case m := <-resetCh:
-			s.clearResults(m.ID)
-		}
+func (s *streamingStrategy) processMeasurementResults(resultCh chan *measurement.Result) {
+	for r := range resultCh {
+		s.processMeasurementResult(r)
 	}
-}
-
-func (s *streamingStrategy) clearResults(id string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	delete(s.measurements, id)
 }
 
 func (s *streamingStrategy) timeoutForMeasurement(m config.Measurement) time.Duration {
