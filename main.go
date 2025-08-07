@@ -72,6 +72,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	log.Debugf("Configured measurements: %v", cfg.MeasurementIDs())
+
 	if *streaming {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -160,6 +162,7 @@ func errorHandler(f func(http.ResponseWriter, *http.Request) error) http.Handler
 
 func handleMetricsRequest(w http.ResponseWriter, r *http.Request) error {
 	id := r.URL.Query().Get("measurement_id")
+	log.Debugf("handleMetricsRequest called with measurement_id=%s", id)
 
 	s := strategy
 
@@ -167,21 +170,26 @@ func handleMetricsRequest(w http.ResponseWriter, r *http.Request) error {
 	if len(id) > 0 {
 		ids = append(ids, id)
 		s = atlas.NewRequestStrategy(cfg, *workerCount)
+		log.Debugf("Using request strategy for specific measurement: %s", id)
 	} else {
 		ids = append(ids, cfg.MeasurementIDs()...)
+		log.Debugf("Using streaming strategy for configured measurements: %v", ids)
 	}
 
 	if len(ids) == 0 {
+		log.Debugf("No measurement IDs to query")
 		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 
+	log.Debugf("Requesting measurements for IDs: %v", ids)
 	measurements, err := s.MeasurementResults(ctx, ids)
 	if err != nil {
 		return err
 	}
+	log.Debugf("Got %d measurements back from strategy", len(measurements))
 
 	reg := prometheus.NewRegistry()
 

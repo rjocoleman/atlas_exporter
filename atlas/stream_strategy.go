@@ -6,7 +6,6 @@ import (
 	"context"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/czerwonk/atlas_exporter/exporter"
 	"github.com/czerwonk/atlas_exporter/probe"
@@ -70,9 +69,11 @@ func (s *streamingStrategy) add(m *measurement.Result, probe *probe.Probe) {
 	defer s.mu.Unlock()
 
 	msm := strconv.Itoa(m.MsmId())
+	log.Debugf("Adding result for measurement ID '%s' (raw MsmId: %d)", msm, m.MsmId())
 
 	mes, found := s.measurements[msm]
 	if !found {
+		log.Debugf("Creating new measurement object for ID '%s' of type '%s'", msm, m.Type())
 		var err error
 		mes, err = measurementForType(m.Type(), msm, strconv.Itoa(m.Af()), s.cfg)
 		if err != nil {
@@ -81,22 +82,34 @@ func (s *streamingStrategy) add(m *measurement.Result, probe *probe.Probe) {
 		}
 
 		s.measurements[msm] = mes
+		log.Debugf("Stored measurement ID '%s' in map. Map now has keys: %v", msm, s.getMapKeys())
 	}
 
 	mes.Add(m, probe)
+}
+
+func (s *streamingStrategy) getMapKeys() []string {
+	keys := make([]string, 0, len(s.measurements))
+	for k := range s.measurements {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func (s *streamingStrategy) MeasurementResults(ctx context.Context, ids []string) ([]*exporter.Measurement, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	log.Debugf("MeasurementResults: Looking for IDs %v in map with keys %v", ids, s.getMapKeys())
+
 	result := make([]*exporter.Measurement, 0)
 	for _, id := range ids {
 		m, found := s.measurements[id]
 		if !found {
+			log.Debugf("MeasurementResults: ID '%s' not found in measurements map", id)
 			continue
 		}
-
+		log.Debugf("MeasurementResults: Found measurement for ID '%s'", id)
 		result = append(result, m)
 	}
 
