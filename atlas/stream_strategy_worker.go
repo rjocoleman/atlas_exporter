@@ -65,7 +65,11 @@ func (w *streamStrategyWorker) subscribe() (<-chan *measurement.Result, error) {
 func (w *streamStrategyWorker) listenForResults(ctx context.Context, timeout time.Duration, ch <-chan *measurement.Result) {
 	for {
 		select {
-		case m := <-ch:
+		case m, ok := <-ch:
+			if !ok {
+				log.Warnf("Stream closed for measurement #%s", w.measurement.ID)
+				return
+			}
 			if m == nil {
 				continue
 			}
