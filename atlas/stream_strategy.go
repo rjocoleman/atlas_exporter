@@ -42,6 +42,7 @@ func (s *streamingStrategy) start(ctx context.Context, measurements []config.Mea
 	for _, m := range measurements {
 		w := &streamStrategyWorker{
 			resultCh:    resultCh,
+			resetCh:     resetCh,
 			measurement: m,
 			timeout:     s.timeoutForMeasurement(m),
 		}
