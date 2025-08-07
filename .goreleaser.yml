@@ -1,20 +1,57 @@
+version: 2
+
 dist: artifacts
 before:
    hooks:
      - go mod download
 builds:
-  - env:
-    - CGO_ENABLED=0
+  - id: atlas_exporter
+    env:
+      - CGO_ENABLED=0
     goos:
-    - linux
-    - darwin
-    - freebsd
+      - linux
+      - darwin
+      - freebsd
     goarch:
-    - amd64
-    - arm
-    - arm64
+      - amd64
+      - arm
+      - arm64
     ignore:
-    - goos: freebsd
-      goarch: arm64
+      - goos: freebsd
+        goarch: arm64
     ldflags: -s -w -X main.version={{.Version}}
-    binary: atlas_exporter 
+    binary: atlas_exporter
+
+dockers:
+  - image_templates:
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Version }}"
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Major }}.{{ .Minor }}"
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:latest"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'

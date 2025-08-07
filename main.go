@@ -21,10 +21,7 @@ import (
 	_ "net/http/pprof"
 )
 
-const (
-	generalTimeout = 60 * time.Second
-	version        = "1.0.4"
-)
+var version = "dev"
 
 var (
 	showVersion         = flag.Bool("version", false, "Print version information.")
@@ -33,7 +30,7 @@ var (
 	cacheTTL            = flag.Int("cache.ttl", 3600, "Cache time to live in seconds")
 	cacheCleanUp        = flag.Int("cache.cleanup", 300, "Interval for cache clean up in seconds")
 	configFile          = flag.String("config.file", "", "Path to congig file to use")
-	timeout             = flag.Duration("timeout", generalTimeout, "Timeout")
+	timeout             = flag.Duration("timeout", 60*time.Second, "Timeout for metrics requests")
 	workerCount         = flag.Uint("worker.count", 8, "Number of go routines retrieving probe information")
 	streaming           = flag.Bool("streaming", true, "Retrieve data by subscribing to Atlas Streaming API")
 	streamingBufferSize = flag.Uint("streaming.buffer-size", 100, "Size of buffer to prevent locking socket.io go routines")

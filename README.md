@@ -4,11 +4,28 @@
 Metric exporter for RIPE Atlas measurement results
 
 ## Fork Notice
-This repository includes a forked version of the RIPE Atlas Go bindings (`github.com/rjocoleman/ripeatlas`) that adds support for NSID (Name Server Identifier) in DNS measurements.
 
-The NSID functionality in the forked ripeatlas library will be contributed back to the upstream project. However, the high-cardinality label implementation in this exporter requires additional work to make it backwards compatible (e.g., feature flags or opt-in configuration) before it can be safely contributed upstream.
+**This is a fork of [czerwonk/atlas_exporter](https://github.com/czerwonk/atlas_exporter) with production fixes and enhancements.**
 
-**⚠️ High Cardinality Warning**: NSID support adds a high-cardinality label to DNS metrics. This is not a drop-in replacement for deployments concerned with cardinality limits. The NSID label is only added when present in DNS responses.
+### Changes from Upstream
+
+#### Production Fixes
+- **Fixed nil channel deadlock** ([#53](https://github.com/czerwonk/atlas_exporter/issues/53)): Properly initialize reset channel in streaming strategy worker
+- **Fixed hot loop from closed channels**: Detect channel closure correctly to prevent 100% CPU usage
+- **Removed aggressive reset mechanism**: Data no longer lost on reconnection, measurements persist properly
+- **Removed timeout-based reconnections**: Rely on WebSocket's built-in ping/pong heartbeat instead of forcing disconnections
+
+#### Features
+- **Stale probe result filtering** ([#59](https://github.com/czerwonk/atlas_exporter/issues/59)): Added `max_result_age` config to filter out old results from non-participating probes
+- **NSID support**: Includes forked RIPE Atlas Go bindings with NSID (Name Server Identifier) support for DNS measurements
+- **Enhanced debug logging**: Comprehensive logging for troubleshooting measurement retrieval issues
+
+#### Build & Release Improvements
+- **Fixed version injection**: Version now properly set via ldflags during build
+- **Simplified Docker builds**: Consolidated release workflow using GoReleaser for both binaries and container images
+- **Cleaner configuration**: Removed unnecessary wrapper scripts and simplified deployment
+
+**⚠️ High Cardinality Warning**: NSID support adds a high-cardinality label to DNS metrics. The NSID label is only added when present in DNS responses.
 
 ## Remarks
 * this is an early version, more features will be added step by step
