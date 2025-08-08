@@ -16,6 +16,7 @@ Metric exporter for RIPE Atlas measurement results
 - **Removed timeout-based reconnections**: Rely on WebSocket's built-in ping/pong heartbeat instead of forcing disconnections
 
 #### Features
+- **Kubernetes health checks**: `/healthz` (liveness) and `/readyz` (readiness) endpoints for container orchestration
 - **Stale probe result filtering** ([#59](https://github.com/czerwonk/atlas_exporter/issues/59)): Added `max_result_age` config to filter out old results from non-participating probes
 - **NSID support**: Includes forked RIPE Atlas Go bindings with NSID (Name Server Identifier) support for DNS measurements
 - **Enhanced debug logging**: Comprehensive logging for troubleshooting measurement retrieval issues
@@ -76,7 +77,9 @@ or using config file mode:
 ```
 
 ### Config file
-for this example we want to retrieve results for measurement 8772164
+See `config.yaml.example` for a complete example with all available options.
+
+Basic example for monitoring measurement 8772164:
 ```YAML
 measurements:
   - id: 8772164
@@ -89,11 +92,8 @@ histogram_buckets:
       - 50.0
       - 100.0
 filter_invalid_results: true
-# Optional: filter out results older than specified duration (e.g., 10m, 1h)
-# Useful for removing stale results from non-participating probes
-# Default: 0 (disabled)
 max_result_age: 10m
- ```
+```
 
 ### Call metrics URI
 when using config file mode:
@@ -129,6 +129,20 @@ atlas_traceroute_hops{asn="133752",dst_addr="8.8.8.8",dst_name="8.8.8.8",ip_vers
 * dns (success, rtt, nsid - Name Server Identifier from EDNS0, displayed as ASCII if printable or hex otherwise)
 * http (return code, rtt, http version, header size, body size)
 * sslcert (alert, rtt)
+
+## Health Checks
+
+The exporter provides Kubernetes-compatible health endpoints:
+
+* `/healthz` - Liveness probe (always returns 200 if the server is running)
+* `/readyz` - Readiness probe (returns 200 when websocket connections are established in streaming mode)
+
+Optional data freshness checking can be configured:
+```yaml
+# In config.yaml
+health_max_data_age: 30m  # Fail readiness if no data received for 30 minutes
+```
+Or via CLI flag: `--health.max-data-age=30m`
 
 ## Prometheus configuration
 

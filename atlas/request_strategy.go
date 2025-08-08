@@ -102,3 +102,9 @@ func (s *requestStrategy) getMeasurementForID(ctx context.Context, id string, ch
 
 	ch <- mes
 }
+
+func (s requestStrategy) IsHealthy() bool {
+	// For request strategy, we're optimistic - assume healthy unless actively failing
+	// The actual health is determined by whether API calls succeed when metrics are scraped
+	return true
+}

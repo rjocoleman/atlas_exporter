@@ -18,6 +18,7 @@ type Config struct {
 	HistogramBuckets     HistogramBuckets `yaml:"histogram_buckets"`
 	FilterInvalidResults bool             `yaml:"filter_invalid_results"`
 	MaxResultAge         time.Duration    `yaml:"max_result_age,omitempty"`
+	HealthMaxDataAge     time.Duration    `yaml:"health_max_data_age,omitempty"`
 }
 
 // HistogramBuckets defines buckets for several histograms

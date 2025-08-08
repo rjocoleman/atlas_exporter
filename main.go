@@ -41,6 +41,7 @@ var (
 	tlsEnabled          = flag.Bool("tls.enabled", false, "Enables TLS")
 	tlsCertChainPath    = flag.String("tls.cert-file", "", "Path to TLS cert file")
 	tlsKeyPath          = flag.String("tls.key-file", "", "Path to TLS key file")
+	healthMaxAge        = flag.Duration("health.max-data-age", 0, "Max data age for readiness check (0=disabled)")
 	cfg                 *config.Config
 	strategy            atlas.Strategy
 )
@@ -67,6 +68,11 @@ func main() {
 	if err != nil {
 		log.Error(err)
 		os.Exit(1)
+	}
+
+	// CLI flag overrides config file if provided
+	if *healthMaxAge > 0 {
+		cfg.HealthMaxDataAge = *healthMaxAge
 	}
 
 	log.Debugf("Configured measurements: %v", cfg.MeasurementIDs())
@@ -132,6 +138,22 @@ func startServer() {
 			</html>`))
 	})
 	http.HandleFunc(*metricsPath, errorHandler(handleMetricsRequest))
+
+	// Health check endpoints
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok\n"))
+	})
+
+	http.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if strategy != nil && strategy.IsHealthy() {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("ready\n"))
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("not ready\n"))
+		}
+	})
 
 	log.Infof("Cache TTL: %v", time.Duration(*cacheTTL)*time.Second)
 	log.Infof("Cache cleanup interval: %v", time.Duration(*cacheCleanUp)*time.Second)

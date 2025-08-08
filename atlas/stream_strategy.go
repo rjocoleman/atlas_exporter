@@ -6,6 +6,8 @@ import (
 	"context"
 	"strconv"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/czerwonk/atlas_exporter/exporter"
 	"github.com/czerwonk/atlas_exporter/probe"
@@ -16,9 +18,11 @@ import (
 )
 
 type streamingStrategy struct {
-	measurements   map[string]*exporter.Measurement
-	cfg            *config.Config
-	mu             sync.Mutex
+	measurements     map[string]*exporter.Measurement
+	cfg              *config.Config
+	mu               sync.Mutex
+	connectedWorkers int32
+	lastDataTime     int64
 }
 
 // NewStreamingStrategy returns an strategy using the RIPE Atlas Streaming API
@@ -39,6 +43,7 @@ func (s *streamingStrategy) start(ctx context.Context, measurements []config.Mea
 		w := &streamStrategyWorker{
 			resultCh:    resultCh,
 			measurement: m,
+			strategy:    s,
 		}
 		go w.run(ctx)
 	}
@@ -54,6 +59,9 @@ func (s *streamingStrategy) processMeasurementResults(resultCh chan *measurement
 
 func (s *streamingStrategy) processMeasurementResult(r *measurement.Result) {
 	log.Infof("Got result for %d from probe %d", r.MsmId(), r.PrbId())
+
+	// Update last data time
+	atomic.StoreInt64(&s.lastDataTime, time.Now().Unix())
 
 	probe, err := probeForID(r.PrbId())
 	if err != nil {
@@ -114,4 +122,30 @@ func (s *streamingStrategy) MeasurementResults(ctx context.Context, ids []string
 	}
 
 	return result, nil
+}
+
+func (s *streamingStrategy) IsHealthy() bool {
+	// Check if we have at least one connected worker
+	connected := atomic.LoadInt32(&s.connectedWorkers)
+	if connected <= 0 {
+		log.Debug("Health check failed: no connected workers")
+		return false
+	}
+
+	// If max data age is configured, also check data freshness
+	if s.cfg.HealthMaxDataAge > 0 {
+		lastData := atomic.LoadInt64(&s.lastDataTime)
+		if lastData == 0 {
+			log.Debug("Health check failed: no data received yet")
+			return false
+		}
+
+		age := time.Since(time.Unix(lastData, 0))
+		if age > s.cfg.HealthMaxDataAge {
+			log.Debugf("Health check failed: data age %v exceeds max %v", age, s.cfg.HealthMaxDataAge)
+			return false
+		}
+	}
+
+	return true
 }

@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/DNS-OARC/ripeatlas"
@@ -21,9 +22,10 @@ const (
 )
 
 type streamStrategyWorker struct {
-	resultCh      chan<- *measurement.Result
-	measurement   config.Measurement
-	retryAttempt  int
+	resultCh     chan<- *measurement.Result
+	measurement  config.Measurement
+	retryAttempt int
+	strategy     *streamingStrategy
 }
 
 // getRetryDelay calculates exponential backoff with jitter
@@ -33,14 +35,14 @@ func (w *streamStrategyWorker) getRetryDelay() time.Duration {
 	if delay > maxRetryDelay {
 		delay = maxRetryDelay
 	}
-	
+
 	// Add jitter (±25%) to prevent thundering herd
 	jitter := time.Duration(rand.Int63n(int64(delay / 2)))
 	finalDelay := delay + jitter - (delay / 4)
-	
-	log.Debugf("Reconnection attempt %d for measurement #%s, waiting %v", 
+
+	log.Debugf("Reconnection attempt %d for measurement #%s, waiting %v",
 		w.retryAttempt+1, w.measurement.ID, finalDelay)
-	
+
 	return finalDelay
 }
 
@@ -53,7 +55,15 @@ func (w *streamStrategyWorker) run(ctx context.Context) error {
 		} else {
 			log.Infof("Subscribed to results of measurement #%s", w.measurement.ID)
 			w.retryAttempt = 0 // Reset on successful connection
+
+			// Increment connected workers count
+			atomic.AddInt32(&w.strategy.connectedWorkers, 1)
+
 			w.listenForResults(ctx, ch)
+
+			// Decrement connected workers count on disconnect
+			atomic.AddInt32(&w.strategy.connectedWorkers, -1)
+
 			w.retryAttempt++ // Increment for next reconnection attempt
 		}
 

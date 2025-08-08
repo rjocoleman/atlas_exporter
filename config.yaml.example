@@ -1,0 +1,71 @@
+# RIPE Atlas exporter configuration example
+# Copy this file to config.yaml and adjust to your needs
+
+# Measurements to monitor
+measurements:
+  # DNS measurement example - Google Public DNS
+  - id: 8310237
+  # Ping measurement example - Root DNS servers
+  - id: 1001
+  # Traceroute measurement example
+  - id: 5001
+  # HTTP measurement example
+  # - id: 1748719
+  # NTP measurement example
+  # - id: 1000001
+
+# Filter out invalid results (recommended)
+filter_invalid_results: true
+
+# Optional: Configure histogram buckets for round trip time metrics
+# Enables percentile calculations (p50, p90, p99, etc)
+histogram_buckets:
+  dns:
+    rtt:
+      - 5.0
+      - 10.0
+      - 25.0
+      - 50.0
+      - 100.0
+      - 250.0
+      - 500.0
+      - 1000.0
+  ping:
+    rtt:
+      - 5.0
+      - 10.0
+      - 25.0
+      - 50.0
+      - 100.0
+      - 250.0
+      - 500.0
+  traceroute:
+    rtt:
+      - 10.0
+      - 25.0
+      - 50.0
+      - 100.0
+      - 250.0
+      - 500.0
+      - 1000.0
+  http:
+    rtt:
+      - 50.0
+      - 100.0
+      - 250.0
+      - 500.0
+      - 1000.0
+      - 2500.0
+      - 5000.0
+
+# Optional: Filter out results older than specified duration
+# Useful for removing stale results from non-participating probes
+# Examples: 10m, 30m, 1h, 24h
+# Default: 0 (disabled)
+max_result_age: 30m
+
+# Optional: Max data age for readiness health check
+# If no data received within this time, /readyz returns 503
+# Only applies when using streaming mode
+# Default: 0 (disabled - only checks websocket connections)
+health_max_data_age: 15m
