@@ -54,6 +54,9 @@ func main() {
 
 	log.Debugf("Configured measurements: %v", cfg.MeasurementIDs())
 
+	// Set build info metric once
+	atlas.SetBuildInfo(version)
+
 	// Root context bound to OS signals for graceful shutdown
 	rootCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -191,6 +194,7 @@ func handleMetricsRequest(w http.ResponseWriter, r *http.Request) error {
 	defer cancel()
 
 	log.Debugf("Requesting measurements for IDs: %v", ids)
+	t0 := time.Now()
 	measurements, err := s.MeasurementResults(ctx, ids)
 	if err != nil {
 		return err
@@ -214,6 +218,8 @@ func handleMetricsRequest(w http.ResponseWriter, r *http.Request) error {
 	// Add exporter observability metrics
 	reg.MustRegister(atlas.StreamConnectedGauge)
 	reg.MustRegister(atlas.LastDataTimestampGauge)
+	reg.MustRegister(atlas.BuildInfoGauge)
+	reg.MustRegister(atlas.ScrapeBuildDuration)
 
 	if len(measurements) > 0 {
 		c := newCollector(measurements)
@@ -222,6 +228,9 @@ func handleMetricsRequest(w http.ResponseWriter, r *http.Request) error {
 
 	l := log.New()
 	l.Level = log.ErrorLevel
+
+	// Observe time to retrieve measurements and build registry
+	atlas.ScrapeBuildDuration.Observe(time.Since(t0).Seconds())
 
 	promhttp.HandlerFor(reg, promhttp.HandlerOpts{
 		ErrorLog:      l,

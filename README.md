@@ -231,3 +231,11 @@ https://atlas.ripe.net
 ## Further Reading
 - RIPE Labs: Using RIPE Atlas measurement results in Prometheus with atlas_exporter
   https://labs.ripe.net/Members/daniel_czerwonk/using-ripe-atlas-measurement-results-in-prometheus-with-atlas_exporter
+### Kubernetes Shutdown Guidance
+- Use `terminationGracePeriodSeconds: 30-60` to allow graceful shutdown. The exporter cancels workers via SIGTERM and performs `http.Server.Shutdown` with a 30s timeout.
+- Prefer readiness/liveness probes:
+  - Liveness: `/healthz`
+  - Readiness: `/readyz` (in streaming mode also considers recent data if `health.max_data_age` > 0)
+- Example probes:
+  - `readinessProbe: { httpGet: { path: /readyz, port: 9400 }, initialDelaySeconds: 5, periodSeconds: 10 }`
+  - `livenessProbe:  { httpGet: { path: /healthz, port: 9400 }, initialDelaySeconds: 5, periodSeconds: 10 }`
