@@ -3,6 +3,7 @@
 package exporter
 
 import (
+	"sync"
 	"time"
 
 	"github.com/DNS-OARC/ripeatlas/measurement"
@@ -36,6 +37,7 @@ func WithMaxResultAge(age time.Duration) MeasurementOpt {
 
 // Measurement handles measurement results and converts to metrics
 type Measurement struct {
+	mu           sync.RWMutex
 	latest       map[int]*measurement.Result
 	probes       map[int]*probe.Probe
 	histograms   []Histogram
@@ -66,6 +68,8 @@ func (r *Measurement) Add(m *measurement.Result, probe *probe.Probe) {
 		return
 	}
 
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.latest[m.PrbId()] = m
 	r.probes[m.PrbId()] = probe
 
@@ -85,7 +89,19 @@ func (r *Measurement) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect collects metrics for the `Measurement`
 func (r *Measurement) Collect(ch chan<- prometheus.Metric) {
+	r.mu.RLock()
+	// snapshot keys to avoid holding lock while exporting
+	results := make([]*measurement.Result, 0, len(r.latest))
 	for _, v := range r.latest {
+		results = append(results, v)
+	}
+	probes := make(map[int]*probe.Probe, len(r.probes))
+	for k, v := range r.probes {
+		probes[k] = v
+	}
+	r.mu.RUnlock()
+
+	for _, v := range results {
 		// Skip stale results if max age is configured
 		if r.maxResultAge > 0 {
 			cutoff := time.Now().Unix() - int64(r.maxResultAge.Seconds())
@@ -93,7 +109,7 @@ func (r *Measurement) Collect(ch chan<- prometheus.Metric) {
 				continue
 			}
 		}
-		r.exporter.Export(v, r.probes[v.PrbId()], ch)
+		r.exporter.Export(v, probes[v.PrbId()], ch)
 	}
 
 	for _, h := range r.histograms {

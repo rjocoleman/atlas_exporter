@@ -21,7 +21,24 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
+    - name: Go vet
+      run: go vet ./...
     - name: Build
-      run: go build
+      run: go build ./...
     - name: Run tests
-      run: go test ./... -v -covermode=count
+      run: go test ./... -v -covermode=atomic -race -count=1
+
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-file: 'go.mod'
+          args: ./...

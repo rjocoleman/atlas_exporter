@@ -23,6 +23,7 @@ func Defaults() map[string]any {
 		"health.max_data_age":     "0s",
 		"filter_invalid_results":  true,
 		"max_result_age":          "0s",
+		"dns.nsid_enabled":        true,
 		// hist buckets default to empty; measurements default to empty
 	}
 }

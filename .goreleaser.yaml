@@ -34,6 +34,7 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--label=org.opencontainers.image.source={{.GitURL}}"
+    dockerfile: goreleaser.Dockerfile
 
 archives:
   - formats: [tar.gz]

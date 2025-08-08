@@ -24,6 +24,11 @@ metrics:
   go_enabled: true
   process_enabled: true
 
+# DNS options
+dns:
+  # Enable NSID label on DNS metrics (disable to avoid high cardinality)
+  nsid_enabled: true
+
 log:
   level: info
 

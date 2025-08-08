@@ -26,5 +26,5 @@ func NewMeasurement(id, ipVersion string, cfg *config.Config) *exporter.Measurem
 		opts = append(opts, exporter.WithMaxResultAge(cfg.MaxResultAge))
 	}
 
-	return exporter.NewMeasurement(&dnsExporter{id}, opts...)
+	return exporter.NewMeasurement(&dnsExporter{id: id, nsidEnabled: cfg.DNS.NSIDEnabled}, opts...)
 }

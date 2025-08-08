@@ -6,4 +6,5 @@ config.yaml
 .vscode/*
 *.iml
 
-
+dist/
+artifacts/
