@@ -24,7 +24,7 @@ Links:
 - **Panic recovery**: Resilient to individual measurement failures - one bad measurement won't crash the exporter
 - **Graceful shutdown**: Handles SIGTERM/SIGINT for clean shutdown in container environments
 - **Stale probe result filtering** ([#59](https://github.com/czerwonk/atlas_exporter/issues/59)): Added `max_result_age` config to filter out old results from non-participating probes
-- **NSID support**: Includes forked RIPE Atlas Go bindings with NSID (Name Server Identifier) support for DNS measurements
+- **NSID support (toggleable)**: Adds NSID (Name Server Identifier) label for DNS measurements. Enabled by default; disable via `dns.nsid_enabled: false` (or `--dns.nsid_enabled=false` / `ATLAS_DNS__NSID_ENABLED=false`).
 - **Enhanced debug logging**: Comprehensive logging for troubleshooting measurement retrieval issues
 
 #### Build & Release Improvements
@@ -32,7 +32,7 @@ Links:
 - **Simplified Docker builds**: Consolidated release workflow using GoReleaser for both binaries and container images
 - **Cleaner configuration**: Removed unnecessary wrapper scripts and simplified deployment
 
-**⚠️ High Cardinality Warning**: NSID support adds a high-cardinality label to DNS metrics. The NSID label is only added when present in DNS responses.
+**⚠️ High Cardinality Warning**: NSID can add high cardinality to DNS metrics. It is enabled by default; disable via `dns.nsid_enabled: false` (or `--dns.nsid_enabled=false` / `ATLAS_DNS__NSID_ENABLED=false`). The label is only added when present in DNS responses.
 
 ## Breaking Changes (This Fork)
 - Unified configuration via koanf + pflag; precedence: defaults < YAML < env < flags
@@ -143,7 +143,7 @@ atlas_traceroute_hops{asn="133752",dst_addr="8.8.8.8",dst_name="8.8.8.8",ip_vers
 * ping measurements (success, min/max/avg latency, dups, size)
 * traceroute measurements (success, hop count, rtt)
 * ntp (delay, derivation, ntp version)
-* dns (success, rtt, nsid - Name Server Identifier from EDNS0, displayed as ASCII if printable or hex otherwise)
+* dns (success, rtt, nsid [optional] - Name Server Identifier from EDNS0, displayed as ASCII if printable or hex otherwise; toggle via `dns.nsid_enabled`)
 * http (return code, rtt, http version, header size, body size)
 * sslcert (alert, rtt)
 
