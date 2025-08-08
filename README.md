@@ -2,7 +2,7 @@
 
 Metric exporter for RIPE Atlas measurement results.
 
-This repository is a fork of the original project with features I need in production including a modernized configuration system.
+This repository is a fork of the original project with features I need in production including a modernized configuration system. You should probaly not use it, it's very specific to my usage.
 
 Links:
 - Original project: https://github.com/czerwonk/atlas_exporter
