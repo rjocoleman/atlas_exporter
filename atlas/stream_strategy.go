@@ -165,7 +165,7 @@ func (s *streamingStrategy) IsHealthy() bool {
 	}
 
 	// If max data age is configured, also check data freshness
-	if s.cfg.HealthMaxDataAge > 0 {
+	if s.cfg.Health.MaxDataAge > 0 {
 		lastData := atomic.LoadInt64(&s.lastDataTime)
 		if lastData == 0 {
 			log.Debug("Health check failed: no data received yet")
@@ -173,8 +173,8 @@ func (s *streamingStrategy) IsHealthy() bool {
 		}
 
 		age := time.Since(time.Unix(lastData, 0))
-		if age > s.cfg.HealthMaxDataAge {
-			log.Debugf("Health check failed: data age %v exceeds max %v", age, s.cfg.HealthMaxDataAge)
+		if age > s.cfg.Health.MaxDataAge {
+			log.Debugf("Health check failed: data age %v exceeds max %v", age, s.cfg.Health.MaxDataAge)
 			return false
 		}
 	}

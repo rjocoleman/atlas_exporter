@@ -1,18 +1,47 @@
 # RIPE Atlas exporter configuration example
 # Copy this file to config.yaml and adjust to your needs
 
-# Measurements to monitor
+web:
+  listen_address: ":9400"
+  telemetry_path: "/metrics"
+
+cache:
+  ttl: "3600s"       # Cache TTL
+  cleanup: "300s"    # Cache cleanup interval
+
+timeout: "60s"        # Timeout for metrics requests
+worker:
+  count: 8            # Number of goroutines retrieving probe info
+
+streaming:
+  enabled: true
+  buffer_size: 100
+
+profiling:
+  enabled: false
+
+metrics:
+  go_enabled: true
+  process_enabled: true
+
+log:
+  level: info
+
+tls:
+  enabled: false
+  cert_file: ""
+  key_file: ""
+
+health:
+  max_data_age: "0s" # 0s disables freshness check
+
+# Measurements to monitor (examples)
 measurements:
-  # DNS measurement example - Google Public DNS
-  - id: 8310237
-  # Ping measurement example - Root DNS servers
-  - id: 1001
-  # Traceroute measurement example
-  - id: 5001
-  # HTTP measurement example
-  # - id: 1748719
-  # NTP measurement example
-  # - id: 1000001
+  - id: 8310237 # DNS example
+  - id: 1001    # Ping example
+  - id: 5001    # Traceroute example
+  # - id: 1748719 # HTTP example
+  # - id: 1000001 # NTP example
 
 # Filter out invalid results (recommended)
 filter_invalid_results: true
@@ -62,10 +91,4 @@ histogram_buckets:
 # Useful for removing stale results from non-participating probes
 # Examples: 10m, 30m, 1h, 24h
 # Default: 0 (disabled)
-max_result_age: 30m
-
-# Optional: Max data age for readiness health check
-# If no data received within this time, /readyz returns 503
-# Only applies when using streaming mode
-# Default: 0 (disabled - only checks websocket connections)
-health_max_data_age: 15m
+max_result_age: "30m"
