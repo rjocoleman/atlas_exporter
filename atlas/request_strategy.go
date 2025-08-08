@@ -62,6 +62,12 @@ func (s requestStrategy) MeasurementResults(ctx context.Context, ids []string) (
 
 func (s *requestStrategy) getMeasurementForID(ctx context.Context, id string, ch chan<- *exporter.Measurement, wg *sync.WaitGroup) {
 	defer wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("Panic getting measurement %s: %v", id, r)
+			// Measurement will be skipped for this scrape
+		}
+	}()
 
 	resultCh, err := s.atlasser.MeasurementLatest(ripeatlas.Params{"pk": id})
 	if err != nil {

@@ -47,6 +47,13 @@ func (w *streamStrategyWorker) getRetryDelay() time.Duration {
 }
 
 func (w *streamStrategyWorker) run(ctx context.Context) error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("Worker panic for measurement %s: %v", w.measurement.ID, r)
+			// Worker will restart via the parent's retry loop
+		}
+	}()
+
 	for {
 		ch, err := w.subscribe()
 		if err != nil {

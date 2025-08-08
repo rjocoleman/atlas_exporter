@@ -17,6 +17,9 @@ Metric exporter for RIPE Atlas measurement results
 
 #### Features
 - **Kubernetes health checks**: `/healthz` (liveness) and `/readyz` (readiness) endpoints for container orchestration
+- **Observability metrics**: Self-monitoring with `atlas_exporter_stream_connected` and `atlas_exporter_last_data_timestamp` metrics
+- **Panic recovery**: Resilient to individual measurement failures - one bad measurement won't crash the exporter
+- **Graceful shutdown**: Handles SIGTERM/SIGINT for clean shutdown in container environments
 - **Stale probe result filtering** ([#59](https://github.com/czerwonk/atlas_exporter/issues/59)): Added `max_result_age` config to filter out old results from non-participating probes
 - **NSID support**: Includes forked RIPE Atlas Go bindings with NSID (Name Server Identifier) support for DNS measurements
 - **Enhanced debug logging**: Comprehensive logging for troubleshooting measurement retrieval issues

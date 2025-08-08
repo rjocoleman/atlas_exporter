@@ -45,15 +45,42 @@ func (s *streamingStrategy) start(ctx context.Context, measurements []config.Mea
 			measurement: m,
 			strategy:    s,
 		}
-		go w.run(ctx)
+		go func() {
+			if err := w.run(ctx); err != nil {
+				log.Errorf("Worker error for measurement %s: %v", m.ID, err)
+			}
+		}()
 	}
 
 	go s.processMeasurementResults(resultCh)
 }
 
 func (s *streamingStrategy) processMeasurementResults(resultCh chan *measurement.Result) {
-	for r := range resultCh {
-		s.processMeasurementResult(r)
+	for {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Errorf("Panic in measurement processor, restarting: %v", r)
+				}
+			}()
+
+			// Process measurements until panic or channel closes
+			for r := range resultCh {
+				s.processMeasurementResult(r)
+			}
+		}()
+
+		// Check if channel is actually closed vs panic recovery
+		select {
+		case _, ok := <-resultCh:
+			if !ok {
+				log.Info("Measurement result channel closed, exiting processor")
+				return
+			}
+		default:
+			// Was a panic, continue outer loop to restart processing
+			time.Sleep(1 * time.Second) // Brief pause before restart
+		}
 	}
 }
 

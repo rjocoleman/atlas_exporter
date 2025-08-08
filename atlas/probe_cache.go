@@ -19,13 +19,13 @@ func InitCache(ttl, cleanup time.Duration) {
 
 func startCacheCleanupFunc(d time.Duration) {
 	go func() {
-		for {
-			select {
-			case <-time.After(d):
-				log.Infoln("Cleaning up cache...")
-				r := cache.CleanUp()
-				log.Infof("Items removed: %d", r)
-			}
+		ticker := time.NewTicker(d)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			log.Infoln("Cleaning up cache...")
+			r := cache.CleanUp()
+			log.Infof("Items removed: %d", r)
 		}
 	}()
 }

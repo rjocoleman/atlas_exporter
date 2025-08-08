@@ -123,7 +123,7 @@ func loadConfig() error {
 func startServer() {
 	log.Infof("Starting atlas exporter (Version: %s)", version)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
+			_, _ = w.Write([]byte(`<html>
 			<head><title>RIPE Atlas Exporter (Version ` + version + `)</title></head>
 			<body>
 			<h1>RIPE Atlas Exporter</h1>
@@ -142,16 +142,16 @@ func startServer() {
 	// Health check endpoints
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok\n"))
+		_, _ = w.Write([]byte("ok\n"))
 	})
 
 	http.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		if strategy != nil && strategy.IsHealthy() {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("ready\n"))
+			_, _ = w.Write([]byte("ready\n"))
 		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("not ready\n"))
+			_, _ = w.Write([]byte("not ready\n"))
 		}
 	})
 
