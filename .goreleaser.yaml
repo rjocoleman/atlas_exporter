@@ -26,6 +26,8 @@ dockers:
   - image_templates:
       - "ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Version }}"
       - "ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:{{ .Major }}.{{ .Minor }}"
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:v{{ .Version }}"
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:v{{ .Major }}.{{ .Minor }}"
       - "ghcr.io/{{ .Env.GITHUB_REPOSITORY }}:latest"
     build_flag_templates:
       - "--platform=linux/amd64"
