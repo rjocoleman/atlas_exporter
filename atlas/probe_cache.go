@@ -3,6 +3,7 @@
 package atlas
 
 import (
+	"context"
 	"time"
 
 	"github.com/czerwonk/atlas_exporter/probe"
@@ -12,20 +13,27 @@ import (
 var cache *probe.Cache
 
 // InitCache initializes the cache
-func InitCache(ttl, cleanup time.Duration) {
+func InitCache(ctx context.Context, ttl, cleanup time.Duration) {
 	cache = probe.NewCache(ttl)
-	startCacheCleanupFunc(cleanup)
+	startCacheCleanupFunc(ctx, cleanup)
 }
 
-func startCacheCleanupFunc(d time.Duration) {
+func startCacheCleanupFunc(ctx context.Context, d time.Duration) {
 	go func() {
 		ticker := time.NewTicker(d)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			log.Infoln("Cleaning up cache...")
-			r := cache.CleanUp()
-			log.Infof("Items removed: %d", r)
+		for {
+			select {
+			case <-ticker.C:
+				log.Debugln("Cleaning up cache...")
+				r := cache.CleanUp()
+				if r > 0 {
+					log.Infof("Cache items removed: %d", r)
+				}
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 }

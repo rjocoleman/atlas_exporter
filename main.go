@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/czerwonk/atlas_exporter/atlas"
 	"github.com/czerwonk/atlas_exporter/config"
@@ -51,10 +54,12 @@ func main() {
 
 	log.Debugf("Configured measurements: %v", cfg.MeasurementIDs())
 
+	// Root context bound to OS signals for graceful shutdown
+	rootCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	if cfg.Streaming.Enabled {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		strategy = atlas.NewStreamingStrategy(ctx, cfg, cfg.Streaming.BufferSize)
+		strategy = atlas.NewStreamingStrategy(rootCtx, cfg, cfg.Streaming.BufferSize)
 	} else {
 		strategy = atlas.NewRequestStrategy(cfg, cfg.Worker.Count)
 	}
@@ -63,7 +68,7 @@ func main() {
 		http.DefaultServeMux = http.NewServeMux()
 	}
 
-	startServer()
+	startServer(rootCtx)
 }
 
 func printVersion() {
@@ -76,7 +81,7 @@ func printVersion() {
 
 // legacy loadConfig removed; using koanf loader in main
 
-func startServer() {
+func startServer(ctx context.Context) {
 	log.Infof("Starting atlas exporter (Version: %s)", version)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`<html>
@@ -113,15 +118,41 @@ func startServer() {
 
 	log.Infof("Cache TTL: %v", cfg.Cache.TTL)
 	log.Infof("Cache cleanup interval: %v", cfg.Cache.Cleanup)
-	atlas.InitCache(cfg.Cache.TTL, cfg.Cache.Cleanup)
+	atlas.InitCache(ctx, cfg.Cache.TTL, cfg.Cache.Cleanup)
 
-	log.Infof("Listening for %s on %s (TLS: %v)", cfg.Web.TelemetryPath, cfg.Web.ListenAddress, cfg.TLS.Enabled)
-	if cfg.TLS.Enabled {
-		log.Fatal(http.ListenAndServeTLS(cfg.Web.ListenAddress, cfg.TLS.CertFile, cfg.TLS.KeyFile, nil))
-		return
+	srv := &http.Server{
+		Addr:              cfg.Web.ListenAddress,
+		ReadTimeout:       10 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 
-	log.Fatal(http.ListenAndServe(cfg.Web.ListenAddress, nil))
+	log.Infof("Listening for %s on %s (TLS: %v)", cfg.Web.TelemetryPath, cfg.Web.ListenAddress, cfg.TLS.Enabled)
+
+	serveErrCh := make(chan error, 1)
+	go func() {
+		if cfg.TLS.Enabled {
+			serveErrCh <- srv.ListenAndServeTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile)
+		} else {
+			serveErrCh <- srv.ListenAndServe()
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		// Graceful shutdown with deadline
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Errorf("HTTP server shutdown error: %v", err)
+		}
+	case err := <-serveErrCh:
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}
 }
 
 func errorHandler(f func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
