@@ -26,7 +26,7 @@ jobs:
     - name: Build
       run: go build ./...
     - name: Run tests
-      run: go test ./... -v -covermode=count -race -count=1
+      run: go test ./... -v -covermode=atomic -race -count=1
 
   govulncheck:
     runs-on: ubuntu-latest
