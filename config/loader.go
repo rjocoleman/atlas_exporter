@@ -48,6 +48,7 @@ func RegisterFlags(fs *pflag.FlagSet) {
 	fs.String("health.max_data_age", d["health.max_data_age"].(string), "Max data age for readiness check (duration, 0s=disabled)")
 	fs.Bool("filter_invalid_results", d["filter_invalid_results"].(bool), "Filter invalid results by IP version capability")
 	fs.String("max_result_age", d["max_result_age"].(string), "Skip results older than this (duration, 0s=disabled)")
+	fs.Bool("dns.nsid_enabled", d["dns.nsid_enabled"].(bool), "Enable DNS NSID label (may increase cardinality)")
 
 	// Special: config file path, not part of Config struct (used for file provider)
 	fs.String("config.file", "", "Path to YAML config file")

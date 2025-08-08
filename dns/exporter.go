@@ -27,14 +27,17 @@ func init() {
 }
 
 type dnsExporter struct {
-	id string
+	id          string
+	nsidEnabled bool
 }
 
 // Export exports a prometheus metric
 func (m *dnsExporter) Export(res *measurement.Result, probe *probe.Probe, ch chan<- prometheus.Metric) {
 	var nsid string
-	if res.DnsResult() != nil {
+	if m.nsidEnabled && res.DnsResult() != nil {
 		nsid = extractNsid(res.DnsResult())
+	} else {
+		nsid = ""
 	}
 
 	labelValues := []string{

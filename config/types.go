@@ -46,6 +46,10 @@ type Config struct {
 		KeyFile  string `koanf:"key_file" yaml:"key_file"`
 	} `koanf:"tls" yaml:"tls"`
 
+	DNS struct {
+		NSIDEnabled bool `koanf:"nsid_enabled" yaml:"nsid_enabled"`
+	} `koanf:"dns" yaml:"dns"`
+
 	Health struct {
 		MaxDataAge time.Duration `koanf:"max_data_age" yaml:"max_data_age"`
 	} `koanf:"health" yaml:"health"`
