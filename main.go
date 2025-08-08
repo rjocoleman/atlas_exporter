@@ -224,6 +224,10 @@ func handleMetricsRequest(w http.ResponseWriter, r *http.Request) error {
 		reg.MustRegister(goCollector)
 	}
 
+	// Add exporter observability metrics
+	reg.MustRegister(atlas.StreamConnectedGauge)
+	reg.MustRegister(atlas.LastDataTimestampGauge)
+
 	if len(measurements) > 0 {
 		c := newCollector(measurements)
 		reg.MustRegister(c)

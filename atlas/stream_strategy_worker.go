@@ -59,10 +59,16 @@ func (w *streamStrategyWorker) run(ctx context.Context) error {
 			// Increment connected workers count
 			atomic.AddInt32(&w.strategy.connectedWorkers, 1)
 
+			// Update connection metric to connected
+			StreamConnectedGauge.WithLabelValues(w.measurement.ID).Set(1)
+
 			w.listenForResults(ctx, ch)
 
 			// Decrement connected workers count on disconnect
 			atomic.AddInt32(&w.strategy.connectedWorkers, -1)
+
+			// Update connection metric to disconnected
+			StreamConnectedGauge.WithLabelValues(w.measurement.ID).Set(0)
 
 			w.retryAttempt++ // Increment for next reconnection attempt
 		}

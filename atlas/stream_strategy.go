@@ -61,7 +61,12 @@ func (s *streamingStrategy) processMeasurementResult(r *measurement.Result) {
 	log.Infof("Got result for %d from probe %d", r.MsmId(), r.PrbId())
 
 	// Update last data time
-	atomic.StoreInt64(&s.lastDataTime, time.Now().Unix())
+	now := time.Now().Unix()
+	atomic.StoreInt64(&s.lastDataTime, now)
+
+	// Update metrics
+	measurementID := strconv.Itoa(r.MsmId())
+	LastDataTimestampGauge.WithLabelValues(measurementID).Set(float64(now))
 
 	probe, err := probeForID(r.PrbId())
 	if err != nil {

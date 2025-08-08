@@ -130,6 +130,15 @@ atlas_traceroute_hops{asn="133752",dst_addr="8.8.8.8",dst_name="8.8.8.8",ip_vers
 * http (return code, rtt, http version, header size, body size)
 * sslcert (alert, rtt)
 
+### Exporter Observability Metrics
+
+The exporter provides its own operational metrics:
+
+* `atlas_exporter_stream_connected{measurement_id="X"}` - Gauge showing if websocket is connected (1) or not (0)
+* `atlas_exporter_last_data_timestamp{measurement_id="X"}` - Gauge with Unix timestamp of last received data
+
+These metrics help monitor the exporter's health and can be used for alerting on connection issues or stale data.
+
 ## Health Checks
 
 The exporter provides Kubernetes-compatible health endpoints:
