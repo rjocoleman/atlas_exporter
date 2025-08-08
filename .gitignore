@@ -1,5 +1,6 @@
 atlas_exporter
 debug
+config.yaml
 
 .idea/*
 .vscode/*

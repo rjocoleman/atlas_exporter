@@ -22,5 +22,9 @@ func NewMeasurement(id, ipVersion string, cfg *config.Config) *exporter.Measurem
 		opts = append(opts, exporter.WithValidator(&exporter.DefaultResultValidator{}))
 	}
 
+	if cfg.MaxResultAge > 0 {
+		opts = append(opts, exporter.WithMaxResultAge(cfg.MaxResultAge))
+	}
+
 	return exporter.NewMeasurement(&dnsExporter{id}, opts...)
 }

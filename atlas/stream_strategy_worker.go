@@ -4,8 +4,10 @@ package atlas
 
 import (
 	"context"
+	"math/rand"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/DNS-OARC/ripeatlas"
@@ -14,31 +16,74 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const connectionRetryInterval = 30 * time.Second
+const (
+	minRetryDelay = 1 * time.Second
+	maxRetryDelay = 60 * time.Second
+)
 
 type streamStrategyWorker struct {
-	resultCh    chan<- *measurement.Result
-	resetCh     chan<- *config.Measurement
-	measurement config.Measurement
-	timeout     time.Duration
+	resultCh     chan<- *measurement.Result
+	measurement  config.Measurement
+	retryAttempt int
+	strategy     *streamingStrategy
+}
+
+// getRetryDelay calculates exponential backoff with jitter
+func (w *streamStrategyWorker) getRetryDelay() time.Duration {
+	// Exponential: 1s, 2s, 4s, 8s, 16s, 32s, 60s (capped)
+	delay := minRetryDelay * time.Duration(1<<uint(w.retryAttempt))
+	if delay > maxRetryDelay {
+		delay = maxRetryDelay
+	}
+
+	// Add jitter (±25%) to prevent thundering herd
+	jitter := time.Duration(rand.Int63n(int64(delay / 2)))
+	finalDelay := delay + jitter - (delay / 4)
+
+	log.Debugf("Reconnection attempt %d for measurement #%s, waiting %v",
+		w.retryAttempt+1, w.measurement.ID, finalDelay)
+
+	return finalDelay
 }
 
 func (w *streamStrategyWorker) run(ctx context.Context) error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("Worker panic for measurement %s: %v", w.measurement.ID, r)
+			// Worker will restart via the parent's retry loop
+		}
+	}()
+
 	for {
 		ch, err := w.subscribe()
 		if err != nil {
 			log.Error(err)
+			w.retryAttempt++
 		} else {
 			log.Infof("Subscribed to results of measurement #%s", w.measurement.ID)
-			w.listenForResults(ctx, w.timeout, ch)
-		}
+			w.retryAttempt = 0 // Reset on successful connection
 
-		w.resetCh <- &w.measurement
+			// Increment connected workers count
+			atomic.AddInt32(&w.strategy.connectedWorkers, 1)
+
+			// Update connection metric to connected
+			StreamConnectedGauge.WithLabelValues(w.measurement.ID).Set(1)
+
+			w.listenForResults(ctx, ch)
+
+			// Decrement connected workers count on disconnect
+			atomic.AddInt32(&w.strategy.connectedWorkers, -1)
+
+			// Update connection metric to disconnected
+			StreamConnectedGauge.WithLabelValues(w.measurement.ID).Set(0)
+
+			w.retryAttempt++ // Increment for next reconnection attempt
+		}
 
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(connectionRetryInterval):
+		case <-time.After(w.getRetryDelay()):
 			continue
 		}
 	}
@@ -62,10 +107,14 @@ func (w *streamStrategyWorker) subscribe() (<-chan *measurement.Result, error) {
 	return ch, nil
 }
 
-func (w *streamStrategyWorker) listenForResults(ctx context.Context, timeout time.Duration, ch <-chan *measurement.Result) {
+func (w *streamStrategyWorker) listenForResults(ctx context.Context, ch <-chan *measurement.Result) {
 	for {
 		select {
-		case m := <-ch:
+		case m, ok := <-ch:
+			if !ok {
+				log.Warnf("Stream closed for measurement #%s", w.measurement.ID)
+				return
+			}
 			if m == nil {
 				continue
 			}
@@ -80,9 +129,6 @@ func (w *streamStrategyWorker) listenForResults(ctx context.Context, timeout tim
 			}
 
 			w.resultCh <- m
-		case <-time.After(timeout):
-			log.Errorf("Timeout reached for measurement #%s. Trying to reconnect.", w.measurement.ID)
-			return
 		case <-ctx.Done():
 			return
 		}

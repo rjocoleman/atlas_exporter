@@ -20,5 +20,9 @@ func NewMeasurement(id string, cfg *config.Config) *exporter.Measurement {
 		opts = append(opts, exporter.WithValidator(&exporter.DefaultResultValidator{}))
 	}
 
+	if cfg.MaxResultAge > 0 {
+		opts = append(opts, exporter.WithMaxResultAge(cfg.MaxResultAge))
+	}
+
 	return exporter.NewMeasurement(&ntpExporter{id}, opts...)
 }

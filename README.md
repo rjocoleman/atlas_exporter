@@ -1,15 +1,54 @@
-# atlas_exporter 
-[![Go Report Card](https://goreportcard.com/badge/github.com/czerwonk/atlas_exporter)](https://goreportcard.com/report/github.com/czerwonk/atlas_exporter)
+# atlas_exporter (fork)
 
-Metric exporter for RIPE Atlas measurement results
+Metric exporter for RIPE Atlas measurement results.
 
-## Remarks
-* this is an early version, more features will be added step by step
-* at the moment only the last result of an measurement is used
-* the required Go version is 1.19+
+This repository is a fork of the original project with features I need in production including a modernized configuration system.
+
+Links:
+- Original project: https://github.com/czerwonk/atlas_exporter
+- This fork (releases): https://github.com/rjocoleman/atlas_exporter/releases
+- Container image: `ghcr.io/rjocoleman/atlas_exporter:latest`
+- RIPE Labs article on using atlas_exporter: https://labs.ripe.net/Members/daniel_czerwonk/using-ripe-atlas-measurement-results-in-prometheus-with-atlas_exporter
+
+## Changes From Upstream
+
+#### Production Fixes
+- **Fixed nil channel deadlock** ([#53](https://github.com/czerwonk/atlas_exporter/issues/53)): Properly initialize reset channel in streaming strategy worker
+- **Fixed hot loop from closed channels**: Detect channel closure correctly to prevent 100% CPU usage
+- **Removed aggressive reset mechanism**: Data no longer lost on reconnection, measurements persist properly
+- **Removed timeout-based reconnections**: Rely on WebSocket's built-in ping/pong heartbeat instead of forcing disconnections
+
+#### Features
+- **Kubernetes health checks**: `/healthz` (liveness) and `/readyz` (readiness) endpoints for container orchestration
+- **Observability metrics**: Self-monitoring with `atlas_exporter_stream_connected` and `atlas_exporter_last_data_timestamp` metrics
+- **Panic recovery**: Resilient to individual measurement failures - one bad measurement won't crash the exporter
+- **Graceful shutdown**: Handles SIGTERM/SIGINT for clean shutdown in container environments
+- **Stale probe result filtering** ([#59](https://github.com/czerwonk/atlas_exporter/issues/59)): Added `max_result_age` config to filter out old results from non-participating probes
+- **NSID support**: Includes forked RIPE Atlas Go bindings with NSID (Name Server Identifier) support for DNS measurements
+- **Enhanced debug logging**: Comprehensive logging for troubleshooting measurement retrieval issues
+
+#### Build & Release Improvements
+- **Fixed version injection**: Version now properly set via ldflags during build
+- **Simplified Docker builds**: Consolidated release workflow using GoReleaser for both binaries and container images
+- **Cleaner configuration**: Removed unnecessary wrapper scripts and simplified deployment
+
+**⚠️ High Cardinality Warning**: NSID support adds a high-cardinality label to DNS metrics. The NSID label is only added when present in DNS responses.
+
+## Breaking Changes (This Fork)
+- Unified configuration via koanf + pflag; precedence: defaults < YAML < env < flags
+- Flag names changed to dotted keys (no backwards compatibility):
+  - Examples: `--web.listen_address`, `--web.telemetry_path`, `--streaming.enabled`, `--worker.count`, `--cache.ttl`
+- Durations are strings (e.g., `30s`, `10m`, `1h`), not integers (seconds)
+- Environment variables use a strict double-underscore segment separator:
+  - `ATLAS_WEB__LISTEN_ADDRESS`, `ATLAS_STREAMING__ENABLED`, `ATLAS_METRICS__GO_ENABLED`, `ATLAS_TLS__CERT_FILE`
+  - Arrays (eg. measurements): `ATLAS_MEASUREMENTS__0__ID`, `ATLAS_MEASUREMENTS__1__ID`
+- YAML schema updated to match dotted keys with underscores inside segment names:
+  - See `config.yaml.example` for the canonical schema
+
+These changes intentionally break compatibility with prior config/flag/env names to simplify and standardize configuration.
 
 ## Streaming API
-Since version 0.8 atlas_exporter also supports retrieving measurement results by RIPE Atlas Streaming API (https://atlas.ripe.net/docs/result-streaming/). Using this feature requires config file mode. All configured measurements are subscribed on start so the latest result for each probe is updated continuously and scrape time is reduced significantly. When a socket.io connection fails or times out a reconnect is initiated. The timeout can be configured using the `-streaming.timeout` parameter. Streaming API is the default for config file mode, it can be disabled by setting `-streaming` to false.
+Since version 0.8 atlas_exporter also supports retrieving measurement results by RIPE Atlas Streaming API (https://atlas.ripe.net/docs/result-streaming/). Using this feature requires config file mode. All configured measurements are subscribed on start so the latest result for each probe is updated continuously and scrape time is reduced significantly. When a socket.io connection fails a reconnect is initiated. Streaming API is the default for config file mode, it can be disabled by setting `--streaming.enabled=false`.
 
 ## Histograms
 Since version 1.0 atlas_exporter provides you with histograms of round trip times of the following measurement types:
@@ -27,19 +66,22 @@ For more information:
 https://prometheus.io/docs/practices/histograms/
 
 ## Install
-```
-go get -u github.com/czerwonk/atlas_exporter
-```
+Download a binary from GitHub Releases: https://github.com/rjocoleman/atlas_exporter/releases
 
 ## Docker
 To start the server:
 ```
-docker run -d --restart unless-stopped -p 9400:9400 czerwonk/atlas_exporter
+docker run -d --restart unless-stopped -p 9400:9400 ghcr.io/rjocoleman/atlas_exporter:latest
 ```
 To run in config file mode:
 ```
-docker run -d -e CONFIG=/tmp/config.yml -v /tmp/config.yml:/tmp/config.yml --restart unless-stopped -p 9400:9400 czerwonk/atlas_exporter 
-``` 
+docker run -d --name atlas_exporter \
+  -e ATLAS_CONFIG_FILE=/etc/atlas/config.yaml \
+  -v /path/to/config.yaml:/etc/atlas/config.yaml:ro \
+  --restart unless-stopped \
+  -p 9400:9400 \
+  ghcr.io/rjocoleman/atlas_exporter:latest
+```
 
 ## Usage
 ### Start server
@@ -48,15 +90,16 @@ docker run -d -e CONFIG=/tmp/config.yml -v /tmp/config.yml:/tmp/config.yml --res
 ```
 or using config file mode:
 ```
-./atlas_exporter -config.file config.yml
+./atlas_exporter --config.file config.yml
 ```
 
 ### Config file
-for this example we want to retrieve results for measurement 8772164
+See `config.yaml.example` for a complete example with all available options.
+
+Basic example for monitoring measurement 8772164:
 ```YAML
 measurements:
   - id: 8772164
-    timeout: 120s
 histogram_buckets:
   ping:
     rtt:
@@ -66,7 +109,8 @@ histogram_buckets:
       - 50.0
       - 100.0
 filter_invalid_results: true
- ```
+max_result_age: 10m
+```
 
 ### Call metrics URI
 when using config file mode:
@@ -78,7 +122,7 @@ or ad hoc for measuremnt 8772164:
 curl http://127.0.0.1:9400/metrics?measurement_id=8772164
 ```
 in both cases the result should look similar to this one:
-``` 
+```
 # HELP atlas_traceroute_hops Number of hops
 # TYPE atlas_traceroute_hops gauge
 atlas_traceroute_hops{asn="1101",dst_addr="8.8.8.8",dst_name="8.8.8.8",ip_version="4",measurement="8772164",probe="6031"} 9
@@ -99,9 +143,42 @@ atlas_traceroute_hops{asn="133752",dst_addr="8.8.8.8",dst_name="8.8.8.8",ip_vers
 * ping measurements (success, min/max/avg latency, dups, size)
 * traceroute measurements (success, hop count, rtt)
 * ntp (delay, derivation, ntp version)
-* dns (succress, rtt)
-* http (return code, rtt, http version, header size, body size)  
+* dns (success, rtt, nsid - Name Server Identifier from EDNS0, displayed as ASCII if printable or hex otherwise)
+* http (return code, rtt, http version, header size, body size)
 * sslcert (alert, rtt)
+
+### Exporter Observability Metrics
+
+The exporter provides its own operational metrics:
+
+* `atlas_exporter_stream_connected{measurement_id="X"}` - Gauge showing if websocket is connected (1) or not (0)
+* `atlas_exporter_last_data_timestamp{measurement_id="X"}` - Gauge with Unix timestamp of last received data
+
+These metrics help monitor the exporter's health and can be used for alerting on connection issues or stale data.
+
+## Health Checks
+
+The exporter provides Kubernetes-compatible health endpoints:
+
+* `/healthz` - Liveness probe (always returns 200 if the server is running)
+* `/readyz` - Readiness probe (returns 200 when websocket connections are established in streaming mode)
+
+Optional data freshness checking can be configured:
+```yaml
+# In config.yaml
+health:
+  max_data_age: 30m  # Fail readiness if no data received for 30 minutes
+```
+Or via CLI flag: `--health.max_data_age=30m`
+
+### Configuration Sources and Precedence
+- Defaults < YAML file (`--config.file` or `ATLAS_CONFIG_FILE`) < Environment (`ATLAS_*`) < Flags
+- Environment mapping (strict): use `__` between path segments; single `_` stays in the name
+  - `ATLAS_WEB__LISTEN_ADDRESS` → `web.listen_address`
+  - `ATLAS_STREAMING__ENABLED` → `streaming.enabled`
+  - `ATLAS_METRICS__GO_ENABLED` → `metrics.go_enabled`
+  - `ATLAS_TLS__CERT_FILE` → `tls.cert_file`
+  - Arrays: `ATLAS_MEASUREMENTS__0__ID`, `ATLAS_MEASUREMENTS__1__ID`
 
 ## Prometheus configuration
 
@@ -139,19 +216,18 @@ atlas_traceroute_hops{asn="133752",dst_addr="8.8.8.8",dst_name="8.8.8.8",ip_vers
 ```
 
 ## Third Party Components
-This software uses components of the following projects
-* Go bindings for RIPE Atlas API (https://github.com/DNS-OARC/ripeatlas)
-* Prometheus Go client library (https://github.com/prometheus/client_golang)
+- Go bindings for RIPE Atlas API: https://github.com/DNS-OARC/ripeatlas
+- Prometheus Go client library: https://github.com/prometheus/client_golang
 
 ## License
-(c) Daniel Czerwonk, 2017. Licensed under [LGPL3](LICENSE) license.
+Upstream copyright (c) Daniel Czerwonk. Licensed under [LGPL-3.0-or-later](LICENSE).
 
 ## Prometheus
-see https://prometheus.io/
+https://prometheus.io/
 
 ## The RIPE Atlas Project
-see http://atlas.ripe.net
+https://atlas.ripe.net
 
-## Further reading
-I wrote an article about atlas_exporter for RIPE Labs. It covers version 0.5.
-https://labs.ripe.net/Members/daniel_czerwonk/using-ripe-atlas-measurement-results-in-prometheus-with-atlas_exporter
+## Further Reading
+- RIPE Labs: Using RIPE Atlas measurement results in Prometheus with atlas_exporter
+  https://labs.ripe.net/Members/daniel_czerwonk/using-ripe-atlas-measurement-results-in-prometheus-with-atlas_exporter
